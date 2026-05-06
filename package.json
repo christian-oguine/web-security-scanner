@@ -1,0 +1,45 @@
+{
+  "name": "web-security-scanner",
+  "version": "1.0.0",
+  "description": "A web security scanner that scans a website for security vulnerabilities",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/christian-oguine/web-security-scanner.git"
+  },
+  "keywords": [
+    "security",
+    "scanner",
+    "web",
+    "vulnerabilities",
+    "cybersecurity"
+  ],
+  "author": "Christian Oguine",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/christian-oguine/web-security-scanner/issues"
+  },
+  "homepage": "https://github.com/christian-oguine/web-security-scanner#readme",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.0",
+    "helmet": "^8.1.0",
+    "pg": "^8.20.0",
+    "ssl-checker": "^3.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
