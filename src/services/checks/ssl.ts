@@ -1,4 +1,4 @@
-import sslChecker from "ssl-checker";
+import { default as sslChecker } from "ssl-checker";
 import { FindingResult } from "../../types/scanner.js";
 
 export async function checkSSL(hostname: string): Promise<FindingResult> {
