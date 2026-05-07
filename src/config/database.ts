@@ -1,0 +1,24 @@
+import "dotenv/config";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import * as schema from "../db/schema.js";
+
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("DATABASE_URL environment variable is not set");
+}
+
+export const pool = new Pool({ connectionString });
+
+export const db = drizzle(pool, { schema });
+
+export async function testDatabaseConnection(): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query("SELECT 1");
+    console.log("✓ Database connection successful");
+  } finally {
+    client.release();
+  }
+}
