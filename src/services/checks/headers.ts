@@ -76,6 +76,44 @@ export async function checkHeaders(url: string): Promise<FindingResult[]> {
       ? "Referrer-Policy header is present."
       : "Referrer-Policy header is missing. Sensitive URL information may leak to third parties.",
   });
+  
+  const server = headers.get("server");
+if (server) {
+  results.push({
+    check: "Server Version Disclosure",
+    status: "fail",
+    severity: "low",
+    score: 0,
+    message: `Server header exposes technology: "${server}". This helps attackers fingerprint your infrastructure.`,
+  });
+} else {
+  results.push({
+    check: "Server Version Disclosure",
+    status: "pass",
+    severity: "low",
+    score: 0,
+    message: "Server header is not exposed.",
+  });
+}
+
+const poweredBy = headers.get("x-powered-by");
+if (poweredBy) {
+  results.push({
+    check: "X-Powered-By Disclosure",
+    status: "fail",
+    severity: "low",
+    score: 0,
+    message: `X-Powered-By header exposes technology: "${poweredBy}". Remove this header to prevent fingerprinting.`,
+  });
+} else {
+  results.push({
+    check: "X-Powered-By Disclosure",
+    status: "pass",
+    severity: "low",
+    score: 0,
+    message: "X-Powered-By header is not exposed.",
+  });
+}
 
   return results;
 }

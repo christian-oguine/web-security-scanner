@@ -4,7 +4,7 @@
 
 Backend API that scans a URL for basic web security issues.
 
-## What is checks
+## What it checks
 
 - HTTP security headers
   - `Content-Security-Policy`
@@ -26,16 +26,30 @@ Backend API that scans a URL for basic web security issues.
 - Drizzle ORM
 - Docker Compose
 
+## API endpoint
+
+- `POST /api/scans`
+
+Request body:
+
+```json
+{
+  "url": "https://example.com"
+}
+```
+
 ## Code structure
 
-- `src/server.ts` - app startup
-- `src/app.ts` - express setup and middleware
-- `src/controllers/scans.controller.ts` - scan request handler
-- `src/validators/scan.validator.ts` - URL validation rules
+- `src/server.ts` - app startup + DB connection test
+- `src/app.ts` - express setup, routes, error handler
+- `src/routes/scans.ts` - scan route
+- `src/controllers/scans.controller.ts` - scan flow logic
+- `src/validators/scan.validator.ts` - input validation
 - `src/services/checks/headers.ts` - header checks
 - `src/services/checks/ssl.ts` - SSL check
+- `src/middleware/rateLimit.ts` - scan rate limit middleware
+- `src/middleware/errorHandler.ts` - global error handler
 - `src/config/database.ts` - DB connection
-- `src/middleware/` - shared middleware
 
 ## How to run project
 
@@ -54,8 +68,6 @@ Backend API that scans a URL for basic web security issues.
    ```
 
 ## Docker DB (PostgreSQL)
-
-The database runs in Docker.
 
 ```bash
 docker compose up -d      # start postgres in background
