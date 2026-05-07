@@ -1,118 +1,77 @@
 # Web Security Scanner
 
-A TypeScript backend service that scans a target URL for common web security weaknesses, with a focus on HTTP security headers and SSL/TLS certificate health.
+## What is this?
 
-## Current Status
+Backend API that scans a URL for basic web security issues.
 
-The project currently includes:
+## What is checks
 
-- Express server bootstrap and middleware setup
-- URL validation and private-host blocking using Zod
-- Security checks for:
-  - HTTP security headers
-  - SSL/TLS certificate validity and expiry
-- PostgreSQL setup with Docker Compose
-- Drizzle ORM database connection scaffold
+- HTTP security headers
+  - `Content-Security-Policy`
+  - `Strict-Transport-Security`
+  - `X-Frame-Options`
+  - `X-Content-Type-Options`
+  - `Referrer-Policy`
+- SSL/TLS certificate
+  - valid or invalid
+  - expiry warning (30 days or less)
 
-## Tech Stack
+## Tech stack
 
-- Node.js + TypeScript (`NodeNext`)
+- Node.js
+- TypeScript
 - Express
 - Zod
-- `ssl-checker`
-- PostgreSQL (`pg`)
-- Drizzle ORM + Drizzle Kit
+- PostgreSQL
+- Drizzle ORM
 - Docker Compose
 
-## Project Flow
+## Code structure
 
-1. A client sends a scan request with a `url`.
-2. Input is validated by schema rules in `src/validators/scan.validator.ts`:
-   - URL is required
-   - URL format is valid
-   - Protocol must be `http` or `https`
-   - Host must not be a private/internal address
-3. The controller extracts the hostname from the URL.
-4. Two checks run in parallel:
-   - `checkHeaders(url)`
-   - `checkSSL(hostname)`
-5. Results are merged into a single `findings` array and returned as JSON.
+- `src/server.ts` - app startup
+- `src/app.ts` - express setup and middleware
+- `src/controllers/scans.controller.ts` - scan request handler
+- `src/validators/scan.validator.ts` - URL validation rules
+- `src/services/checks/headers.ts` - header checks
+- `src/services/checks/ssl.ts` - SSL check
+- `src/config/database.ts` - DB connection
+- `src/middleware/` - shared middleware
 
-## Code Structure
+## How to run project
 
-- `src/server.ts`
-  - Starts the app and verifies DB connectivity via `testDatabaseConnection()`.
-- `src/app.ts`
-  - Sets up `helmet`, JSON parsing, and rate limiting.
-- `src/controllers/scans.controller.ts`
-  - Handles scan requests and orchestrates checks.
-- `src/validators/scan.validator.ts`
-  - Validates scan input and blocks private/internal host targets.
-- `src/services/checks/headers.ts`
-  - Checks key security headers and returns scored findings.
-- `src/services/checks/ssl.ts`
-  - Checks certificate validity and days remaining.
-- `src/config/database.ts`
-  - Creates Postgres pool + Drizzle instance.
-- `src/middleware/errorHandler.ts`
-  - Centralized error middleware.
+1. Install packages:
+   ```bash
+   npm install
+   ```
+2. Add `.env` values (DB + app config).
+3. Start Postgres:
+   ```bash
+   docker compose up -d
+   ```
+4. Run dev server:
+   ```bash
+   npm run dev
+   ```
 
-## Security Checks Implemented
+## Docker DB (PostgreSQL)
 
-### HTTP Security Headers
-
-The scanner currently checks:
-
-- `Content-Security-Policy` (high)
-- `Strict-Transport-Security` (high)
-- `X-Frame-Options` (medium)
-- `X-Content-Type-Options` (low)
-- `Referrer-Policy` (low)
-
-### SSL/TLS
-
-The scanner checks:
-
-- Whether a certificate is valid
-- Whether it expires in 30 days or fewer (warning)
-- Whether HTTPS is missing/invalid (critical fail)
-
-## Environment Variables
-
-Use a `.env` file with values like:
-
-- `PORT` (default `5000`)
-- `DATABASE_URL`
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `POSTGRES_HOST_PORT`
-
-## Docker (PostgreSQL)
-
-Start Postgres:
+The database runs in Docker.
 
 ```bash
-docker compose up -d
+docker compose up -d      # start postgres in background
+docker compose ps         # check container status
+docker compose logs -f db # watch database logs
+docker compose down       # stop containers
 ```
-
-Default setup maps host port `5436` to Postgres container port `5432` (configurable via env vars).
 
 ## Scripts
 
 ```bash
-npm run dev         # Start in watch mode
-npm run build       # TypeScript build
-npm run start       # Run built server
-npm run db:generate # Generate drizzle migration
-npm run db:migrate  # Run migrations
-npm run db:studio   # Open Drizzle Studio
+npm run dev         # run server in watch mode (tsx)
+npm run build       # compile TypeScript to dist/
+npm run start       # run compiled app from dist/server.js
+npm run db:generate # generate new drizzle migration files
+npm run db:migrate  # apply migrations to database
+npm run db:studio   # open drizzle studio UI
 ```
 
-## Next Steps
-
-- Wire scan routes in `app.ts` if not already mounted
-- Apply validation middleware at route level
-- Mount `errorHandler` as the last middleware
-- Add tests for validators, controller, and checks
-- Persist scan history/findings to PostgreSQL
