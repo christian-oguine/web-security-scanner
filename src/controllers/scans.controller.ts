@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { scanRequestSchema } from "../validators/scan.validator.js";
 import { checkHeaders } from "../services/checks/headers.js";
 import { checkSSL } from "../services/checks/ssl.js";
+import { checkDNS } from "../services/checks/dns.js";
+import { checkExposedFiles } from "../services/checks/files.js";
 
 export async function createScan(req: Request, res: Response) {
   try {
@@ -21,6 +23,8 @@ export async function createScan(req: Request, res: Response) {
     const [headerResults, sslResult] = await Promise.allSettled([
       checkHeaders(url),
       checkSSL(hostname),
+      checkDNS(hostname),
+      checkExposedFiles(url),
     ]);
 
     const findings = [
