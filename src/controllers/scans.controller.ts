@@ -52,7 +52,7 @@ export async function createScan(req: Request, res: Response) {
 
 export async function getScan(req: Request, res: Response) {
   try {
-    const { id } = req.params;
+    const id = req.params['id'] as string;
 
     const [scan] = await db
       .select()
