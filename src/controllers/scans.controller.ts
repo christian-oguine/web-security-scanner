@@ -3,6 +3,7 @@ import { scanRequestSchema } from "../validators/scan.validator.js";
 import { runScan } from "../services/scanner.js";
 import { db } from "../config/database.js";
 import { scans } from "../db/schema.js";
+import { eq } from "drizzle-orm";
 
 export async function createScan(req: Request, res: Response) {
   try {
@@ -46,5 +47,26 @@ export async function createScan(req: Request, res: Response) {
     res.status(500).json({
       error: "An unexpected error occurred during the scan",
     });
+  }
+}
+
+export async function getScan(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    const [scan] = await db
+      .select()
+      .from(scans)
+      .where(eq(scans.id, id));
+
+    if (!scan) {
+      res.status(404).json({ error: "Scan not found" });
+      return;
+    }
+
+    res.status(200).json(scan);
+  } catch (error) {
+    console.error("Get scan error:", error);
+    res.status(500).json({ error: "An unexpected error occurred" });
   }
 }

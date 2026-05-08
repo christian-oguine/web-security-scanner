@@ -27,7 +27,7 @@ export async function checkHeaders(url: string): Promise<FindingResult[]> {
     check: "Content-Security-Policy",
     status: csp ? "pass" : "fail",
     severity: "high",
-    score: csp ? 25 : 0,
+    score: csp ? 22 : 0,
     message: csp
       ? "Content-Security-Policy header is present."
       : "Content-Security-Policy header is missing. The site is vulnerable to XSS attacks.",
@@ -38,7 +38,7 @@ export async function checkHeaders(url: string): Promise<FindingResult[]> {
     check: "Strict-Transport-Security",
     status: hsts ? "pass" : "fail",
     severity: "high",
-    score: hsts ? 25 : 0,
+    score: hsts ? 22 : 0,
     message: hsts
       ? "Strict-Transport-Security header is present."
       : "Strict-Transport-Security header is missing. The site is vulnerable to protocol downgrade attacks.",
@@ -49,7 +49,7 @@ export async function checkHeaders(url: string): Promise<FindingResult[]> {
     check: "X-Frame-Options",
     status: xframe ? "pass" : "fail",
     severity: "medium",
-    score: xframe ? 15 : 0,
+    score: xframe ? 13 : 0,
     message: xframe
       ? "X-Frame-Options header is present."
       : "X-Frame-Options header is missing. The site may be vulnerable to clickjacking.",
@@ -60,7 +60,7 @@ export async function checkHeaders(url: string): Promise<FindingResult[]> {
     check: "X-Content-Type-Options",
     status: xcto ? "pass" : "fail",
     severity: "low",
-    score: xcto ? 10 : 0,
+    score: xcto ? 8 : 0,
     message: xcto
       ? "X-Content-Type-Options header is present."
       : "X-Content-Type-Options header is missing. The site is vulnerable to MIME type confusion attacks.",
@@ -76,44 +76,28 @@ export async function checkHeaders(url: string): Promise<FindingResult[]> {
       ? "Referrer-Policy header is present."
       : "Referrer-Policy header is missing. Sensitive URL information may leak to third parties.",
   });
-  
-  const server = headers.get("server");
-if (server) {
-  results.push({
-    check: "Server Version Disclosure",
-    status: "fail",
-    severity: "low",
-    score: 0,
-    message: `Server header exposes technology: "${server}". This helps attackers fingerprint your infrastructure.`,
-  });
-} else {
-  results.push({
-    check: "Server Version Disclosure",
-    status: "pass",
-    severity: "low",
-    score: 0,
-    message: "Server header is not exposed.",
-  });
-}
 
-const poweredBy = headers.get("x-powered-by");
-if (poweredBy) {
+  const server = headers.get("server");
+  results.push({
+    check: "Server Version Disclosure",
+    status: server ? "fail" : "pass",
+    severity: "low",
+    score: server ? 0 : 5,
+    message: server
+      ? `Server header exposes technology: "${server}". This helps attackers fingerprint your infrastructure.`
+      : "Server header is not exposed.",
+  });
+
+  const poweredBy = headers.get("x-powered-by");
   results.push({
     check: "X-Powered-By Disclosure",
-    status: "fail",
+    status: poweredBy ? "fail" : "pass",
     severity: "low",
-    score: 0,
-    message: `X-Powered-By header exposes technology: "${poweredBy}". Remove this header to prevent fingerprinting.`,
+    score: poweredBy ? 0 : 5,
+    message: poweredBy
+      ? `X-Powered-By header exposes technology: "${poweredBy}". Remove this header to prevent fingerprinting.`
+      : "X-Powered-By header is not exposed.",
   });
-} else {
-  results.push({
-    check: "X-Powered-By Disclosure",
-    status: "pass",
-    severity: "low",
-    score: 0,
-    message: "X-Powered-By header is not exposed.",
-  });
-}
 
   return results;
 }
