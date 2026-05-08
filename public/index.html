@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CIO Security Scanner</title>
+  <meta name="description" content="Automated web security scanner. Check HTTP headers, SSL certificates, DMARC records, and exposed files. Built by Christian Oguine." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%232563eb'/><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' fill='white' font-size='10' font-weight='800' font-family='system-ui'>CIO</text></svg>" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      background: #f4f6fa;
+      color: #1a1d23;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Nav */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 40px;
+      background: #fff;
+      border-bottom: 0.5px solid #e2e6ed;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-mark {
+      width: 34px; height: 34px;
+      background: #2563eb;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 11px; color: #fff; letter-spacing: -0.5px;
+      flex-shrink: 0;
+    }
+    .logo-name { font-weight: 700; font-size: 15px; color: #1a1d23; }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-link {
+      display: flex; align-items: center; gap: 5px;
+      color: #6b7280; font-size: 12px; text-decoration: none;
+      padding: 6px 10px; border-radius: 7px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-link:hover { background: #f1f5f9; color: #1a1d23; }
+    .nav-link svg { flex-shrink: 0; }
+
+    /* Hero */
+    .hero {
+      padding: 52px 40px 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 70% 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #eff6ff; border: 0.5px solid #bfdbfe;
+      color: #2563eb; font-size: 11px; font-weight: 600;
+      padding: 4px 10px; border-radius: 20px; margin-bottom: 16px;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      background: #2563eb; border-radius: 50%;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    h1 {
+      font-size: 34px; font-weight: 800;
+      color: #0f172a; line-height: 1.25; margin-bottom: 10px;
+    }
+    h1 span { color: #2563eb; }
+    .sub {
+      color: #64748b; font-size: 14px; line-height: 1.65;
+      margin-bottom: 28px; max-width: 560px;
+    }
+
+    /* Form card */
+    .form-card {
+      background: #fff;
+      border: 0.5px solid #e2e6ed;
+      border-radius: 14px;
+      padding: 28px;
+    }
+    .perm-box {
+      background: #fffbeb;
+      border: 0.5px solid #fcd34d;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex; gap: 10px;
+      margin-bottom: 20px;
+    }
+    .perm-box input {
+      accent-color: #2563eb;
+      width: 16px; height: 16px;
+      margin-top: 2px; flex-shrink: 0; cursor: pointer;
+    }
+    .perm-box label {
+      font-size: 12px; color: #92400e;
+      line-height: 1.6; cursor: pointer;
+    }
+    .perm-box label b { color: #78350f; }
+    .url-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .url-input {
+      flex: 1;
+      background: #f8fafc;
+      border: 0.5px solid #e2e6ed;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #1a1d23;
+      font-size: 14px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .url-input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+    .scan-btn {
+      background: #2563eb; color: #fff;
+      border: none; border-radius: 8px;
+      padding: 12px 24px; font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      white-space: nowrap;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .scan-btn:hover:not(:disabled) { background: #1d4ed8; }
+    .scan-btn:active:not(:disabled) { transform: scale(0.98); }
+    .scan-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .hint { color: #94a3b8; font-size: 11px; }
+
+    /* Info cards */
+    .info-cards { display: flex; flex-direction: column; gap: 10px; }
+    .info-card {
+      background: #fff;
+      border: 0.5px solid #e2e6ed;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .info-card-title {
+      font-size: 11px; font-weight: 700;
+      color: #1a1d23; margin-bottom: 5px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .info-card p { font-size: 11px; color: #64748b; line-height: 1.5; }
+
+    /* Loading */
+    .loading-card {
+      background: #fff;
+      border: 0.5px solid #e2e6ed;
+      border-radius: 14px;
+      padding: 40px;
+      text-align: center;
+      max-width: 1100px;
+      margin: 0 auto 24px;
+    }
+    .loading-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 16px; }
+    .loading-dot {
+      width: 10px; height: 10px;
+      background: #2563eb; border-radius: 50%;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    .loading-title { font-size: 15px; font-weight: 600; color: #0f172a; margin-bottom: 4px; }
+    .loading-url { font-size: 13px; color: #64748b; font-family: monospace; margin-bottom: 8px; }
+    .loading-sub { font-size: 12px; color: #94a3b8; }
+
+    /* Results */
+    .results-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 40px 48px;
+      animation: fadeUp 0.35s ease forwards;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .grade-card {
+      background: #fff;
+      border: 0.5px solid #e2e6ed;
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 28px;
+      align-items: center;
+    }
+    .grade-badge {
+      width: 88px; height: 88px;
+      border-radius: 16px;
+      border: 2.5px solid #ef4444;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px; font-weight: 800;
+      color: #ef4444; background: #fff5f5;
+      flex-shrink: 0;
+    }
+    .grade-badge.grade-a { border-color: #16a34a; color: #16a34a; background: #f0fdf4; }
+    .grade-badge.grade-b { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+    .grade-badge.grade-c { border-color: #d97706; color: #d97706; background: #fffbeb; }
+    .grade-badge.grade-d { border-color: #ea580c; color: #ea580c; background: #fff7ed; }
+    .grade-badge.grade-f { border-color: #ef4444; color: #ef4444; background: #fff5f5; }
+    .grade-label { font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
+    .grade-score { font-size: 28px; font-weight: 800; color: #0f172a; margin-bottom: 10px; }
+    .score-bar {
+      height: 6px; background: #f1f5f9;
+      border-radius: 3px; overflow: hidden; margin-bottom: 6px;
+    }
+    .score-fill {
+      height: 100%; border-radius: 3px;
+      background: #ef4444;
+      transition: width 1s ease;
+    }
+    .score-fill.grade-a { background: #16a34a; }
+    .score-fill.grade-b { background: #2563eb; }
+    .score-fill.grade-c { background: #d97706; }
+    .score-fill.grade-d { background: #ea580c; }
+    .grade-meta { font-size: 11px; color: #94a3b8; }
+    .pills { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .pill {
+      font-size: 11px; padding: 4px 10px;
+      border-radius: 20px; font-weight: 600;
+    }
+    .pill-pass { background: #f0fdf4; color: #16a34a; border: 0.5px solid #bbf7d0; }
+    .pill-fail { background: #fff5f5; color: #ef4444; border: 0.5px solid #fecaca; }
+    .pill-warn { background: #fffbeb; color: #d97706; border: 0.5px solid #fcd34d; }
+    .section-lbl {
+      font-size: 11px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;
+    }
+    .findings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .fc {
+      background: #fff;
+      border: 0.5px solid #e2e6ed;
+      border-radius: 10px;
+      padding: 14px 16px;
+      border-left: 3px solid #ef4444;
+    }
+    .fc.pass { border-left-color: #16a34a; }
+    .fc.warn { border-left-color: #d97706; }
+    .fc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%; background: #ef4444; flex-shrink: 0;
+    }
+    .status-dot.pass { background: #16a34a; }
+    .status-dot.warn { background: #d97706; }
+    .fc-name { font-size: 12px; font-weight: 700; color: #1a1d23; flex: 1; }
+    .sev {
+      font-size: 10px; padding: 2px 7px;
+      border-radius: 10px; font-weight: 600;
+    }
+    .sev-critical { background: #fdf4ff; color: #9333ea; }
+    .sev-high { background: #fff5f5; color: #ef4444; }
+    .sev-medium { background: #fffbeb; color: #d97706; }
+    .sev-low { background: #eff6ff; color: #2563eb; }
+    .sev-info { background: #f8fafc; color: #64748b; }
+    .autofail-tag {
+      font-size: 10px; padding: 2px 6px; border-radius: 4px;
+      background: #fff5f5; color: #ef4444;
+      border: 0.5px solid #fecaca; font-weight: 600;
+    }
+    .pts { font-size: 10px; color: #16a34a; font-weight: 700; }
+    .fc-msg { font-size: 11px; color: #64748b; line-height: 1.5; }
+    .scan-again-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: none; border: 0.5px solid #e2e6ed;
+      border-radius: 8px; padding: 8px 16px;
+      font-size: 12px; color: #64748b; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .scan-again-btn:hover { border-color: #2563eb; color: #2563eb; }
+
+    /* Error */
+    .error-card {
+      background: #fff; border: 0.5px solid #fecaca;
+      border-radius: 14px; padding: 28px; text-align: center;
+      max-width: 1100px; margin: 0 auto 24px;
+    }
+    .error-msg { font-size: 14px; color: #ef4444; font-weight: 600; margin-bottom: 8px; }
+    .error-sub { font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
+
+    /* Checks section */
+    .checks-section {
+      border-top: 0.5px solid #e2e6ed;
+      padding: 60px 40px;
+      background: #fff;
+    }
+    .checks-inner { max-width: 1100px; margin: 0 auto; }
+    .section-heading { font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+    .section-sub { font-size: 13px; color: #64748b; margin-bottom: 32px; }
+    .checks-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .check-card {
+      background: #f8fafc;
+      border: 0.5px solid #e2e6ed;
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .check-card:hover { border-color: #2563eb; transform: translateY(-2px); }
+    .check-icon {
+      width: 36px; height: 36px;
+      background: #eff6ff; border: 0.5px solid #bfdbfe;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 12px;
+    }
+    .check-card h3 { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+    .check-card p { font-size: 12px; color: #64748b; line-height: 1.5; }
+
+    /* Projects */
+    .projects-section {
+      border-top: 0.5px solid #e2e6ed;
+      padding: 60px 40px;
+      background: #f4f6fa;
+    }
+    .projects-inner { max-width: 1100px; margin: 0 auto; }
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .project-card {
+      background: #fff;
+      border: 0.5px solid #e2e6ed;
+      border-radius: 12px;
+      padding: 20px;
+      text-decoration: none;
+      display: block;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .project-card:hover { border-color: #2563eb; transform: translateY(-2px); }
+    .project-card.current { border-color: #bfdbfe; }
+    .project-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .project-badge {
+      font-size: 10px; font-weight: 600; padding: 3px 8px;
+      border-radius: 20px;
+    }
+    .badge-live { background: #f0fdf4; color: #16a34a; border: 0.5px solid #bbf7d0; }
+    .badge-current { background: #eff6ff; color: #2563eb; border: 0.5px solid #bfdbfe; }
+    .project-arrow { color: #94a3b8; font-size: 14px; }
+    .project-card h3 { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+    .project-card p { font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 12px; }
+    .tech-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tech-tag {
+      font-size: 10px; padding: 2px 8px; border-radius: 6px;
+      background: #f1f5f9; color: #64748b; font-weight: 500;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 0.5px solid #e2e6ed;
+      background: #fff;
+      padding: 32px 40px;
+    }
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .footer-top {
+      display: flex; align-items: center;
+      justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+    .footer-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+    .footer-title { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .footer-links { display: flex; gap: 4px; }
+    .footer-link {
+      display: flex; align-items: center; gap: 5px;
+      color: #64748b; font-size: 12px; text-decoration: none;
+      padding: 6px 10px; border-radius: 7px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .footer-link:hover { background: #f1f5f9; color: #1a1d23; }
+    .footer-disclaimer {
+      font-size: 11px; color: #94a3b8; line-height: 1.6;
+      border-top: 0.5px solid #e2e6ed; padding-top: 16px;
+    }
+
+    /* Utility */
+    .hidden { display: none !important; }
+    .padded { padding: 0 40px; max-width: 1100px; margin: 0 auto; }
+    .mt16 { margin-top: 16px; }
+    .text-center { text-align: center; }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <a class="logo" href="/">
+      <div class="logo-mark">CIO</div>
+      <span class="logo-name">Security Scanner</span>
+    </a>
+    <div class="nav-links">
+      <a class="nav-link" href="https://christianoguine.be" target="_blank">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Portfolio
+      </a>
+      <a class="nav-link" href="https://github.com/christian-oguine" target="_blank">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        GitHub
+      </a>
+      <a class="nav-link" href="https://linkedin.com/in/christian-oguine" target="_blank">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        LinkedIn
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <div class="badge">
+          <div class="badge-dot"></div>
+          Automated security scanning
+        </div>
+        <h1>Know your site's<br><span>security posture</span></h1>
+        <p class="sub">Check HTTP security headers, SSL certificates, DMARC records, and exposed sensitive files. Get an actionable security grade in seconds — no login required.</p>
+
+        <div class="form-card">
+          <div class="perm-box">
+            <input type="checkbox" id="permission-check" onchange="toggleScanBtn()" />
+            <label for="permission-check">
+              <b>Required —</b> I confirm that I own this domain or have explicit written permission from the domain owner to perform security scanning. Unauthorised scanning may violate the Belgian Computer Crime Act and equivalent laws in your jurisdiction.
+            </label>
+          </div>
+          <div class="url-row">
+            <input
+              type="text"
+              id="url-input"
+              class="url-input"
+              placeholder="example.com or https://example.com"
+              onkeydown="handleKey(event)"
+            />
+            <button class="scan-btn" id="scan-btn" disabled onclick="runScan()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Scan now
+            </button>
+          </div>
+          <p class="hint">3 scans per IP per hour · passive checks only · no exploitation or injection</p>
+        </div>
+      </div>
+
+      <div class="info-cards">
+        <div class="info-card">
+          <div class="info-card-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            What gets checked
+          </div>
+          <p>HTTP security headers · SSL/TLS certificate validity · DMARC DNS record · Exposed .env and .git/config files</p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            How grading works
+          </div>
+          <p>Passing checks earn points toward a score of 100. Critical failures — exposed credentials or missing SSL — trigger automatic F regardless of other results.</p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            Responsible use
+          </div>
+          <p>Only scan systems you own or are explicitly authorised to test. Passive observation only — no exploitation, no injection.</p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            Built by
+          </div>
+          <p>Christian Oguine · CEH Certified · Cybersecurity &amp; Full-Stack Developer · Ghent, Belgium</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Loading -->
+  <div id="loading-state" class="hidden padded mt16">
+    <div class="loading-card">
+      <div class="loading-dots">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+      </div>
+      <p class="loading-title">Scanning in progress</p>
+      <p class="loading-url" id="loading-url"></p>
+      <p class="loading-sub">Running header, SSL, DMARC, and file exposure checks in parallel...</p>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="error-state" class="hidden padded mt16">
+    <div class="error-card">
+      <p class="error-msg" id="error-msg">Something went wrong</p>
+      <p class="error-sub" id="error-sub"></p>
+      <button class="scan-again-btn" onclick="resetScan()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.45"/></svg>
+        Try again
+      </button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-state" class="hidden results-wrap">
+    <div class="grade-card">
+      <div class="grade-badge" id="grade-badge"></div>
+      <div>
+        <p class="grade-label" id="grade-label"></p>
+        <p class="grade-score" id="grade-score"></p>
+        <div class="score-bar">
+          <div class="score-fill" id="score-fill" style="width:0%"></div>
+        </div>
+        <p class="grade-meta" id="grade-meta"></p>
+      </div>
+    </div>
+
+    <div class="pills" id="findings-pills"></div>
+    <p class="section-lbl">Findings</p>
+    <div class="findings-grid" id="findings-grid"></div>
+
+    <div class="text-center">
+      <button class="scan-again-btn" onclick="resetScan()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.45"/></svg>
+        Scan another domain
+      </button>
+    </div>
+  </div>
+
+  <!-- What gets checked -->
+  <section class="checks-section">
+    <div class="checks-inner">
+      <h2 class="section-heading">What gets checked</h2>
+      <p class="section-sub">Four categories of surface-level security checks run in parallel on every scan.</p>
+      <div class="checks-grid">
+        <div class="check-card">
+          <div class="check-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>HTTP Security Headers</h3>
+          <p>Checks for CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and technology disclosure headers. Missing headers leave browsers unprotected.</p>
+        </div>
+        <div class="check-card">
+          <div class="check-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h3>SSL/TLS Certificate</h3>
+          <p>Verifies the certificate is valid and checks how many days remain before expiry. A missing or expired certificate means all traffic travels unencrypted.</p>
+        </div>
+        <div class="check-card">
+          <div class="check-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          <h3>DMARC DNS Record</h3>
+          <p>Checks for a DMARC record and evaluates the policy strength. Missing DMARC allows anyone to send emails appearing to come from your domain.</p>
+        </div>
+        <div class="check-card">
+          <div class="check-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <h3>Exposed Sensitive Files</h3>
+          <p>Attempts to access /.env and /.git/config — files that should never be publicly reachable. Exposure means credentials and source code are compromised.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Projects -->
+  <section class="projects-section">
+    <div class="projects-inner">
+      <h2 class="section-heading">More projects</h2>
+      <p class="section-sub">Other things built by Christian Oguine.</p>
+      <div class="projects-grid">
+        <a class="project-card" href="https://christianoguine.be" target="_blank">
+          <div class="project-top">
+            <span class="project-badge badge-live">Live</span>
+            <span class="project-arrow">→</span>
+          </div>
+          <h3>Reusable Auth System</h3>
+          <p>Production-deployed authentication and authorisation API. JWT, sessions, RBAC, audit logging, Zero Trust infrastructure with Netbird WireGuard, and Wazuh SIEM with MITRE ATT&CK mapping.</p>
+          <div class="tech-tags">
+            <span class="tech-tag">Node.js</span>
+            <span class="tech-tag">TypeScript</span>
+            <span class="tech-tag">PostgreSQL</span>
+            <span class="tech-tag">WireGuard</span>
+          </div>
+        </a>
+        <a class="project-card" href="https://christianoguine.be" target="_blank">
+          <div class="project-top">
+            <span class="project-badge badge-live">Live</span>
+            <span class="project-arrow">→</span>
+          </div>
+          <h3>RAG Engine</h3>
+          <p>Full retrieval-augmented generation engine built from scratch. Powers the AI assistant on my portfolio site. OpenAI embeddings, pgvector, GPT-4o-mini, streaming SSE, multilingual detection.</p>
+          <div class="tech-tags">
+            <span class="tech-tag">Node.js</span>
+            <span class="tech-tag">pgvector</span>
+            <span class="tech-tag">GPT-4o</span>
+            <span class="tech-tag">SSE</span>
+          </div>
+        </a>
+        <a class="project-card current" href="https://github.com/christian-oguine/web-security-scanner" target="_blank">
+          <div class="project-top">
+            <span class="project-badge badge-current">This project</span>
+            <span class="project-arrow">→</span>
+          </div>
+          <h3>CIO Security Scanner</h3>
+          <p>Automated web security scanner. HTTP headers, SSL, DMARC, exposed files. Weighted scoring, grade A to F, PostgreSQL persistence via Drizzle ORM. Open source.</p>
+          <div class="tech-tags">
+            <span class="tech-tag">TypeScript</span>
+            <span class="tech-tag">Express</span>
+            <span class="tech-tag">Drizzle</span>
+            <span class="tech-tag">PostgreSQL</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div>
+          <p class="footer-name">Christian Oguine</p>
+          <p class="footer-title">CEH Certified — Cybersecurity &amp; Full-Stack Developer — Ghent, Belgium</p>
+        </div>
+        <div class="footer-links">
+          <a class="footer-link" href="https://christianoguine.be" target="_blank">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            Website
+          </a>
+          <a class="footer-link" href="https://github.com/christian-oguine" target="_blank">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+            GitHub
+          </a>
+          <a class="footer-link" href="https://linkedin.com/in/christian-oguine" target="_blank">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+            LinkedIn
+          </a>
+        </div>
+      </div>
+      <p class="footer-disclaimer">
+        This tool is intended for scanning websites you own or have explicit written permission to test.
+        Unauthorised scanning may violate the Belgian Computer Crime Act and equivalent laws in your jurisdiction.
+        Results reflect surface-level checks only and do not constitute a full security assessment.
+        The author accepts no responsibility for misuse.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    function toggleScanBtn() {
+      const checked = document.getElementById('permission-check').checked;
+      document.getElementById('scan-btn').disabled = !checked;
+    }
+
+    function handleKey(e) {
+      if (e.key === 'Enter' && !document.getElementById('scan-btn').disabled) runScan();
+    }
+
+    function normaliseUrl(raw) {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+      return 'https://' + trimmed;
+    }
+
+    async function runScan() {
+      const raw = document.getElementById('url-input').value;
+      const url = normaliseUrl(raw);
+      if (!url) { document.getElementById('url-input').focus(); return; }
+
+      document.getElementById('url-input').value = url;
+      document.getElementById('loading-url').textContent = url;
+      document.getElementById('scan-btn').disabled = true;
+
+      show('loading-state');
+      hide('results-state');
+      hide('error-state');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/scans`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const msg = data.details ? data.details.join(' ') : data.error;
+          showError(msg, 'Check the URL and try again.');
+          return;
+        }
+        renderResults(data);
+      } catch {
+        showError('Could not reach the scanner API.', 'Make sure the server is running and try again.');
+      }
+    }
+
+    function gradeClass(g) {
+      return 'grade-' + g.toLowerCase();
+    }
+
+    function sevClass(s) {
+      return 'sev-' + s;
+    }
+
+    function statusClass(s) {
+      if (s === 'pass') return 'pass';
+      if (s === 'warning') return 'warn';
+      return '';
+    }
+
+    function dotClass(s) {
+      if (s === 'pass') return 'pass';
+      if (s === 'warning') return 'warn';
+      return '';
+    }
+
+    function formatDate(iso) {
+      return new Date(iso).toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function renderResults(data) {
+      hide('loading-state');
+
+      const gc = gradeClass(data.grade);
+      const badge = document.getElementById('grade-badge');
+      badge.textContent = data.grade;
+      badge.className = 'grade-badge ' + gc;
+
+      document.getElementById('grade-label').textContent = 'Security grade — ' + data.domain;
+      document.getElementById('grade-score').textContent = data.score + ' / 100';
+
+      const fill = document.getElementById('score-fill');
+      fill.className = 'score-fill ' + gc;
+      setTimeout(() => { fill.style.width = data.score + '%'; }, 100);
+
+      document.getElementById('grade-meta').textContent =
+        'Scanned ' + formatDate(data.scannedAt) + ' · ' + data.scanDurationMs + 'ms · ' + data.findings.length + ' checks run';
+
+      const passed = data.findings.filter(f => f.status === 'pass').length;
+      const failed = data.findings.filter(f => f.status === 'fail').length;
+      const warned = data.findings.filter(f => f.status === 'warning').length;
+
+      document.getElementById('findings-pills').innerHTML =
+        '<span class="pill pill-pass">' + passed + ' passed</span>' +
+        (warned > 0 ? '<span class="pill pill-warn">' + warned + ' warning</span>' : '') +
+        '<span class="pill pill-fail">' + failed + ' failed</span>';
+
+      const sorted = [...data.findings].sort((a, b) => {
+        const o = { fail: 0, warning: 1, pass: 2 };
+        return o[a.status] - o[b.status];
+      });
+
+      document.getElementById('findings-grid').innerHTML = sorted.map(f => `
+        <div class="fc ${statusClass(f.status)}">
+          <div class="fc-head">
+            <div class="status-dot ${dotClass(f.status)}"></div>
+            <span class="fc-name">${f.check}</span>
+            <span class="sev ${sevClass(f.severity)}">${f.severity}</span>
+            ${f.autoFail ? '<span class="autofail-tag">auto-fail</span>' : ''}
+            ${f.score > 0 ? '<span class="pts">+' + f.score + ' pts</span>' : ''}
+          </div>
+          <p class="fc-msg">${f.message}</p>
+        </div>
+      `).join('');
+
+      show('results-state');
+      document.getElementById('results-state').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function showError(msg, sub) {
+      hide('loading-state');
+      document.getElementById('error-msg').textContent = msg;
+      document.getElementById('error-sub').textContent = sub || '';
+      show('error-state');
+      document.getElementById('scan-btn').disabled = false;
+    }
+
+    function resetScan() {
+      hide('results-state');
+      hide('error-state');
+      hide('loading-state');
+      document.getElementById('url-input').value = '';
+      document.getElementById('permission-check').checked = false;
+      document.getElementById('scan-btn').disabled = true;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function show(id) { document.getElementById(id).classList.remove('hidden'); }
+    function hide(id) { document.getElementById(id).classList.add('hidden'); }
+  </script>
+</body>
+</html>
