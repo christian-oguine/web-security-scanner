@@ -11,14 +11,28 @@ async function checkFile(
       signal: AbortSignal.timeout(8000),
     });
 
-    if (response.status !== 200) {
+    if ([401, 403, 404, 301, 302].includes(response.status)) {
       return { exposed: false, status: response.status };
     }
 
     const body = await response.text();
-    const exposed = body.length > 0 && !body.toLowerCase().includes("<!doctype html");
+    const cleanBody = body.trim();
 
-    return { exposed, status: response.status };
+    if (cleanBody.length === 0) {
+      return { exposed: false, status: response.status };
+    }
+
+    if (path === "/.env") {
+      const hasEnvKeys = /^[A-Z0-9_]+=/m.test(cleanBody);
+      return { exposed: hasEnvKeys, status: response.status };
+    }
+
+    if (path === "/.git/config") {
+      const hasGitStructure = cleanBody.includes("[core]");
+      return { exposed: hasGitStructure, status: response.status };
+    }
+
+    return { exposed: false, status: response.status };
   } catch {
     return { exposed: false, status: 0 };
   }
