@@ -100,3 +100,8 @@ Define internal owners for:
 - Vulnerability disclosure decisions
 
 If your team has no defined owner, pause external scanning until ownership is assigned.
+
+## Document Ownership
+
+- Developer: Christian Oguine
+- Last Updated: 2026-05-08
